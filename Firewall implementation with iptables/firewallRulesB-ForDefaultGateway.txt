@@ -1,0 +1,29 @@
+#! /bin/sh
+
+# delete all rules
+iptables -F
+# allow incoming conections from the internet to ports 80, 443 (http, https) and forward them to the HTTP Server.
+iptables -A FORWARD -s 0/0 -i eth0 -d 192.168.1.30 -o eth0 -p tcp --dport 80 -j ACCEPT
+iptables -A FORWARD -s 0/0 -i eth0 -d 192.168.1.30 -o eth0 -p tcp --dport 443 -j ACCEPT
+# allow incoming connections from the internet to port 25,143(smtp, imap) and forward them to the Mail Server.
+iptables -A FORWARD -s 0/0 -i eth0 -d 192.168.1.30 -o eth0 -p tcp --dport 25 -j ACCEPT
+iptables -A FORWARD -s 0/0 -i eth0 -d 192.168.1.30 -o eth0 -p tcp --dport 143 -j ACCEPT
+# allow outgoing connections from the HTTP Server(Workstation) to port 80,443 (http, https) and forward them to the internet. 
+iptables -A FORWARD -s 192.168.1.30 -i eth0 -d 0/0 -o eth0 -p tcp --dport 80 -j ACCEPT
+iptables -A FORWARD -s 192.168.1.30 -i eth0 -d 0/0 -o eth0 -p tcp --dport 443 -j ACCEPT
+# allow outgoing connections from the Mail Server(Workstation) to port 25,143(smtp, imap) and forward them to the internet. 
+iptables -A FORWARD -s 192.168.1.30 -i eth0 -d 0/0 -o eth0 -p tcp --dport 25 -j ACCEPT
+iptables -A FORWARD -s 192.168.1.30 -i eth0 -d 0/0 -o eth0 -p tcp --dport 143 -j ACCEPT
+# allow outgoing connections from the internal network to ports 20, 21 (ftp data, ftp cmd) and forward them to the internet.
+iptables -A FORWARD -s 192.168.1.30 -i eth0 -d 0/0 -o eth0 -p tcp --dport 20 -j ACCEPT
+iptables -A FORWARD -s 192.168.1.30 -i eth0 -d 0/0 -o eth0 -p tcp --dport 21 -j ACCEPT
+#allow all incoming connections if established.
+iptables -A FORWARD -s 0/0 -i eth0 -d 192.168.1.30 -o eth0 -m state --state ESTABLISHED,RELATED -j ACCEPT
+# allow recieving ping requests with a rate of 10 per minute and forward them to the wokstation LAN .
+iptables -A FORWARD -s 0/0 -i eth0 -d 192.168.1.30 -o eth0 -p icmp -m limit --limit 10/min -j ACCEPT
+# allow outgoing ping requests from the workstation.
+iptables -A FORWARD -s 192.168.1.30 -i eth0 -d 0/0 -o eth0 -p icmp --icmp-type echo-request -j ACCEPT
+#allow outgoing connections from the Http Server if established (for HTTP responses)
+iptables -A FORWARD -s 192.168.1.30 -i eth0 -d 0/0 -o eth0 -p tcp -m state --state ESTABLISHED,RELATED -j ACCEPT
+# drop everything else
+iptables -A FORWARD -j DROP

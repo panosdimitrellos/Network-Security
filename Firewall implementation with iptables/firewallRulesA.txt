@@ -1,0 +1,29 @@
+#! /bin/sh
+
+# delete all rules
+iptables -F
+# reject every traffic that is not allowed 
+iptables -P INPUT DROP 
+iptables -P OUTPUT DROP 
+# allow the traffic from loopback interface
+iptables -A INPUT -i lo -j ACCEPT
+sudo iptables -A OUTPUT -o lo -j ACCEPT
+# create a list for the allowed services 
+iptables -N WHITELIST
+iptables -A OUTPUT -j WHITELIST
+# allow outgoing traffic only to dns,http,https,smtp
+iptables -A WHITELIST -p tcp -m multiport --dports 53,80,443,25 -j ACCEPT
+# allow the sending ping packets
+iptables -A OUTPUT -p icmp -j ACCEPT
+# allow the ingoing ping packets with a rate 5 per minute
+iptables -A INPUT -p icmp -m limit --limit 5/min -j ACCEPT 
+# every connection which has been allowd from previous rules is allowed until the end of the connection.
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT 
+# log every traffic before being droped 
+iptables -N LOGNDROPLIST
+iptables -A INPUT -j LOGNDROPLIST
+iptables -A LOGNDROPLIST -j LOG --log-prefix "INPUT:DROP: " --log-level 6
+iptables -A LOGNDROPLIST -j DROP
+iptables -A OUTPUT -j LOGNDROPLIST
+iptables -A LOGNDROPLIST -j LOG --log-prefix "OUTPUT:DROP: " --log-level 6
+iptables -A LOGNDROPLIST -j DROP
